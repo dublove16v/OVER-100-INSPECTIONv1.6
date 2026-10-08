@@ -9,6 +9,7 @@ import pandas as pd
 from datetime import datetime, date
 from pathlib import Path
 import re
+import html
 import hashlib
 import hmac
 
@@ -331,7 +332,6 @@ if page == "Inventory List":
 
     df = query_df(sql, params)
     st.write(f"**{len(df)} vehicles**")
-    st.caption("Hover a car to read the notes. Click the stock number to open its workbook.")
 
     if not df.empty:
         notes_all = query_df(
