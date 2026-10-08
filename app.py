@@ -206,8 +206,8 @@ def save_live_db():
         token = st.secrets.get("GITHUB_TOKEN", "")
     except Exception:
         token = ""
-    if not token:
-        return False, "Live save is not turned on yet. Add GITHUB_TOKEN in Streamlit secrets."
+    if not token or "..." in token or "real_long" in token or token.strip() in {"github_pat_", "github_pat_..."}:
+        return False, "Secrets has the example text, not the copied token. In GitHub, click the copy icon on the green token, paste that long string between the quotes, then Save changes."
     api = "https://api.github.com/repos/dublove16v/OVER-100-INSPECTIONv1.6/contents/inventory.db"
     headers = {
         "Authorization": f"Bearer {token}",
