@@ -196,6 +196,41 @@ def execute(sql, params=None):
         conn.commit()
         return cur.lastrowid
 
+def save_live_db():
+    """Write inventory.db to GitHub so a redeploy does not wipe it."""
+    import base64
+    import json
+    import urllib.request
+    token = ""
+    try:
+        token = st.secrets.get("GITHUB_TOKEN", "")
+    except Exception:
+        token = ""
+    if not token:
+        return False, "Live save is not turned on yet. Add GITHUB_TOKEN in Streamlit secrets."
+    api = "https://api.github.com/repos/dublove16v/OVER-100-INSPECTIONv1.6/contents/inventory.db"
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Accept": "application/vnd.github+json",
+        "User-Agent": "over100",
+    }
+    try:
+        req = urllib.request.Request(api + "?ref=main", headers=headers)
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            sha = json.loads(resp.read().decode())["sha"]
+        body = json.dumps({
+            "message": "Save live inventory database",
+            "content": base64.b64encode(DB_PATH.read_bytes()).decode(),
+            "sha": sha,
+            "branch": "main",
+        }).encode()
+        put = urllib.request.Request(api, data=body, headers={**headers, "Content-Type": "application/json"}, method="PUT")
+        with urllib.request.urlopen(put, timeout=60) as resp:
+            resp.read()
+        return True, "Live database saved to GitHub."
+    except Exception as exc:
+        return False, f"Live save failed: {exc}"
+
 def ensure_log():
     execute(
         """
@@ -284,6 +319,10 @@ page = st.sidebar.radio(
 
 st.sidebar.markdown("---")
 st.sidebar.caption(f"DB: {DB_PATH.name}")
+if st.sidebar.button("Save live database"):
+    ok, msg = save_live_db()
+    st.sidebar.success(msg) if ok else st.sidebar.error(msg)
+st.sidebar.caption("Saves inventory.db to GitHub so a redeploy keeps notes and checks.")
 stats = query_df("SELECT status, COUNT(*) as cnt FROM vehicles GROUP BY status")
 for _, r in stats.iterrows():
     st.sidebar.metric(r["status"].title(), r["cnt"])
@@ -536,6 +575,7 @@ elif page == "Vehicle Workbook":
                 [new_etc.isoformat() if new_etc else None, 1 if new_done3 else 0, 1 if new_done4 else 0, vid]
             )
             st.success("Readiness fields saved")
+            save_live_db()
             st.rerun()
 
         st.markdown("---")
@@ -544,6 +584,7 @@ elif page == "Vehicle Workbook":
         if st.button("Update Status") and new_status != v["status"]:
             execute("UPDATE vehicles SET status=?, updated_at=CURRENT_TIMESTAMP WHERE id=?", [new_status, vid])
             st.success(f"Status changed to {new_status}")
+            save_live_db()
             st.rerun()
 
     def render_notes(note_type, title):
@@ -569,6 +610,7 @@ elif page == "Vehicle Workbook":
                             elif new_text.strip() and new_text.strip() != str(n["content"]):
                                 log_change(int(n["id"]), vid, v["stock_number"], "edit", note_type, n["content"], new_text.strip(), n["author"], changed_by.strip())
                                 execute("UPDATE notes SET content=?, author=? WHERE id=?", [new_text.strip(), changed_by.strip(), int(n["id"])])
+                                save_live_db()
                                 st.session_state["edit_note"] = None
                                 st.rerun()
                             else:
@@ -593,6 +635,7 @@ elif page == "Vehicle Workbook":
                                 else:
                                     log_change(int(n["id"]), vid, v["stock_number"], "delete", note_type, n["content"], "", n["author"], who.strip())
                                     execute("DELETE FROM notes WHERE id=?", [int(n["id"])])
+                                    save_live_db()
                                     st.session_state["delete_note"] = None
                                     st.rerun()
                     st.markdown("---")
@@ -642,6 +685,7 @@ elif page == "Vehicle Workbook":
                         [vid, content.strip(), author.strip() or "User"],
                     )
                     st.success("Saved")
+                    save_live_db()
                     st.rerun()
 
     with tab_history:
@@ -764,6 +808,7 @@ elif page == "Weekly Snapshot":
                         sold_stocks.append(str(r["stock_number"]))
             st.session_state["last_sold_stocks"] = sold_stocks
             st.success(f"Snapshot processed: **{new_count} new**, **{updated_count} updated**, **{sold_count} marked sold**")
+            save_live_db()
             if sold_stocks:
                 st.warning("Marked sold (missing from this report): " + ", ".join(sold_stocks))
             else:
@@ -806,6 +851,7 @@ elif page == "Archived / Sold":
             for s in to_restore:
                 execute("UPDATE vehicles SET status='active', updated_at=CURRENT_TIMESTAMP WHERE stock_number=?", [s])
             st.success(f"Restored {len(to_restore)} vehicles")
+            save_live_db()
             st.rerun()
 
 # ---------- CHANGE LOG ----------
