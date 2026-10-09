@@ -611,14 +611,11 @@ elif page == "Vehicle Workbook":
                     editing = st.session_state.get("edit_note") == int(n["id"])
                     if editing:
                         new_text = st.text_area("Edit note", value=n["content"], key=f"edit_txt_{n['id']}")
-                        changed_by = st.text_input("Your name (required for the log)", key=f"edit_by_{n['id']}")
                         c1, c2 = st.columns(2)
                         if c1.button("Save edit", key=f"save_edit_{n['id']}"):
-                            if not changed_by.strip():
-                                st.warning("Enter your name so the change is logged.")
-                            elif new_text.strip() and new_text.strip() != str(n["content"]):
-                                log_change(int(n["id"]), vid, v["stock_number"], "edit", note_type, n["content"], new_text.strip(), n["author"], changed_by.strip())
-                                execute("UPDATE notes SET content=?, author=? WHERE id=?", [new_text.strip(), changed_by.strip(), int(n["id"])])
+                            if new_text.strip() and new_text.strip() != str(n["content"]):
+                                log_change(int(n["id"]), vid, v["stock_number"], "edit", note_type, n["content"], new_text.strip(), n["author"], "")
+                                execute("UPDATE notes SET content=? WHERE id=?", [new_text.strip(), int(n["id"])])
                                 save_live_db()
                                 st.session_state["edit_note"] = None
                                 st.rerun()
