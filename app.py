@@ -130,12 +130,11 @@ input, textarea, select {
 .inv-table { width: 100%; border-collapse: collapse; background: #ffffff; color: #262730; font-size: 0.86rem; table-layout: auto; }
 .inv-table th { text-align: left; background: #f0f2f6; color: #262730; padding: 0.45rem 0.5rem; border-bottom: 1px solid #d1d5db; white-space: nowrap; }
 .inv-table td { padding: 0.2rem 0.35rem; border-bottom: 1px solid #eef0f3; color: #262730; vertical-align: middle; white-space: nowrap; }
-div[data-testid="stHorizontalBlock"] { gap: 0.35rem; }
-div[data-testid="column"] { padding-left: 0.15rem; padding-right: 0.15rem; }
-div[data-testid="stVerticalBlock"] { gap: 0.15rem; }
-div[data-testid="stButton"] button { padding: 0.05rem 0.35rem; min-height: 1.5rem; }
-.one-line, .one-line p { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin: 0; line-height: 1.7rem; }
-div[data-testid="stMarkdown"] p { margin-bottom: 0; }
+div[data-testid="stHorizontalBlock"] { gap: 0.45rem; }
+div[data-testid="column"] { padding-left: 0.25rem; padding-right: 0.25rem; }
+div[data-testid="stButton"] button { padding: 0.1rem 0.4rem; min-height: 1.7rem; }
+.one-line, .one-line p { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin: 0; line-height: 1.8rem; }
+.flag-mark { color: #b91c1c; font-weight: 700; }
 .inv-table th:last-child, .inv-table td.note-short {
   width: 280px;
   max-width: 280px;
