@@ -295,6 +295,12 @@ def ensure_flags():
         execute("ALTER TABLE vehicles ADD COLUMN flag_by TEXT")
     if "flag_note" not in cols:
         execute("ALTER TABLE vehicles ADD COLUMN flag_note TEXT")
+    if "reshoot" not in cols:
+        execute("ALTER TABLE vehicles ADD COLUMN reshoot INTEGER DEFAULT 0")
+    if "reshoot_by" not in cols:
+        execute("ALTER TABLE vehicles ADD COLUMN reshoot_by TEXT")
+    if "reshoot_note" not in cols:
+        execute("ALTER TABLE vehicles ADD COLUMN reshoot_note TEXT")
 
 ensure_flags()
 
@@ -376,7 +382,7 @@ if page == "Inventory List":
 
     sql = """
         SELECT id, stock_number, year, make, model_desc, vin, age_days, miles, list_price, cost, key_code,
-               etc_date, done3, done4, flagged, flag_by, flag_note
+               etc_date, done3, done4, flagged, flag_by, flag_note, reshoot, reshoot_by, reshoot_note
         FROM vehicles
         WHERE status = 'active'
     """
@@ -436,13 +442,14 @@ if page == "Inventory List":
         display["ETC"] = display["etc_date"].fillna("")
         display["Notes"] = display["id"].map(note_preview)
         display["Flag"] = display["flagged"].apply(lambda x: "🚩" if x else "")
-        display = display[["stock_number", "Vehicle", "vin", "age_days", "miles", "list_price", "cost", "ETC", "Done 3", "Done 4", "Notes", "Flag", "flag_by", "flag_note", "id"]]
-        display.columns = ["Stock#", "Vehicle", "VIN", "Age", "Miles", "List $", "Cost $", "ETC", "Done 3", "Done 4", "Notes", "Flag", "Flag by", "Flag note", "id"]
+        display["Camera"] = display["reshoot"].apply(lambda x: "📷" if x else "")
+        display = display[["stock_number", "Vehicle", "vin", "age_days", "miles", "list_price", "cost", "ETC", "Done 3", "Done 4", "Notes", "Flag", "flag_by", "flag_note", "Camera", "reshoot_by", "reshoot_note", "id"]]
+        display.columns = ["Stock#", "Vehicle", "VIN", "Age", "Miles", "List $", "Cost $", "ETC", "Done 3", "Done 4", "Notes", "Flag", "Flag by", "Flag note", "Camera", "Camera by", "Camera note", "id"]
 
         st.caption("Hover a car to read the notes. Click the stock number to open its workbook in this tab.")
-        widths = [0.85, 2.1, 1.35, 0.42, 0.62, 0.62, 0.62, 0.7, 0.38, 0.38, 1.7, 0.32]
+        widths = [0.85, 2.1, 1.35, 0.42, 0.62, 0.62, 0.62, 0.7, 0.38, 0.38, 1.7, 0.32, 0.32]
         header = st.columns(widths)
-        for col, name in zip(header, ["Stock#", "Vehicle", "VIN", "Age", "Miles", "List $", "Cost $", "ETC", "D3", "D4", "Notes", ""]):
+        for col, name in zip(header, ["Stock#", "Vehicle", "VIN", "Age", "Miles", "List $", "Cost $", "ETC", "D3", "D4", "Notes", "", ""]):
             col.markdown(f"**{name}**")
         for _, rec in display.iterrows():
             tip = html.escape(str(rec["Notes"])).replace("\n", "<br>")
@@ -489,6 +496,13 @@ if page == "Inventory List":
             if rec["Flag"]:
                 cols[11].markdown(
                     f"<span class='note-hover flag-mark'>🚩<span class='note-bubble'>Flagged by {who}<br>{why}</span></span>",
+                    unsafe_allow_html=True,
+                )
+            cam_who = html.escape(str(rec["Camera by"] or ""))
+            cam_why = html.escape(str(rec["Camera note"] or "")).replace("\n", "<br>")
+            if rec["Camera"]:
+                cols[12].markdown(
+                    f"<span class='note-hover flag-mark'>📷<span class='note-bubble'>Reshoot by {cam_who}<br>{cam_why}</span></span>",
                     unsafe_allow_html=True,
                 )
 
@@ -600,6 +614,30 @@ elif page == "Vehicle Workbook":
                 st.rerun()
     elif v["flagged"]:
         execute("UPDATE vehicles SET flagged=0, flag_by=NULL, flag_note=NULL, updated_at=CURRENT_TIMESTAMP WHERE id=?", [vid])
+        save_live_db()
+        st.rerun()
+
+    cam_on = st.toggle("📷 Needs photo reshoot", value=bool(v["reshoot"]), key=f"cam_toggle_{vid}")
+    if cam_on and v["reshoot"]:
+        name_col, note_col = st.columns(2)
+        name_col.text_input("Your name", value=v["reshoot_by"] or "", key=f"cam_name_locked_{vid}", disabled=True)
+        note_col.text_input("Why does it need a reshoot?", value=v["reshoot_note"] or "", key=f"cam_note_locked_{vid}", disabled=True)
+    elif cam_on:
+        name_col, note_col = st.columns(2)
+        cam_name = name_col.text_input("Your name", key=f"cam_name_{vid}")
+        cam_note = note_col.text_input("Why does it need a reshoot?", key=f"cam_note_{vid}")
+        if st.button("Save reshoot", key=f"set_cam_{vid}"):
+            if not cam_name.strip():
+                st.warning("A name is required to mark a reshoot.")
+            else:
+                execute(
+                    "UPDATE vehicles SET reshoot=1, reshoot_by=?, reshoot_note=?, updated_at=CURRENT_TIMESTAMP WHERE id=?",
+                    [cam_name.strip(), cam_note.strip(), vid],
+                )
+                save_live_db()
+                st.rerun()
+    elif v["reshoot"]:
+        execute("UPDATE vehicles SET reshoot=0, reshoot_by=NULL, reshoot_note=NULL, updated_at=CURRENT_TIMESTAMP WHERE id=?", [vid])
         save_live_db()
         st.rerun()
 
