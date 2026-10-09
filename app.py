@@ -129,7 +129,12 @@ input, textarea, select {
 .inv-wrap { overflow-x: auto; border: 1px solid #e5e7eb; border-radius: 10px; background: #ffffff; }
 .inv-table { width: 100%; border-collapse: collapse; background: #ffffff; color: #262730; font-size: 0.86rem; table-layout: auto; }
 .inv-table th { text-align: left; background: #f0f2f6; color: #262730; padding: 0.45rem 0.5rem; border-bottom: 1px solid #d1d5db; white-space: nowrap; }
-.inv-table td { padding: 0.4rem 0.5rem; border-bottom: 1px solid #eef0f3; color: #262730; vertical-align: top; white-space: nowrap; }
+.inv-table td { padding: 0.2rem 0.35rem; border-bottom: 1px solid #eef0f3; color: #262730; vertical-align: middle; white-space: nowrap; }
+div[data-testid="stHorizontalBlock"] { gap: 0.35rem; }
+div[data-testid="column"] { padding-left: 0.15rem; padding-right: 0.15rem; }
+div[data-testid="stVerticalBlock"] { gap: 0.15rem; }
+div[data-testid="stButton"] button { padding: 0.05rem 0.35rem; min-height: 1.5rem; }
+.flag-mark { color: #b91c1c; font-weight: 700; }
 .inv-table th:last-child, .inv-table td.note-short {
   width: 280px;
   max-width: 280px;
@@ -261,6 +266,15 @@ def log_change(note_id, vehicle_id, stock, action, note_type, old_content, new_c
 
 ensure_log()
 
+def ensure_flags():
+    cols = {row[1] for row in query_df("PRAGMA table_info(vehicles)").itertuples(index=False)}
+    if "flagged" not in cols:
+        execute("ALTER TABLE vehicles ADD COLUMN flagged INTEGER DEFAULT 0")
+    if "flag_by" not in cols:
+        execute("ALTER TABLE vehicles ADD COLUMN flag_by TEXT")
+
+ensure_flags()
+
 # A stock link from the list opens that workbook directly, same tab.
 open_stock = st.query_params.get("open") or st.query_params.get("stock")
 if open_stock:
@@ -344,7 +358,7 @@ if page == "Inventory List":
 
     sql = """
         SELECT id, stock_number, year, make, model_desc, vin, age_days, miles, list_price, cost, key_code,
-               etc_date, done3, done4
+               etc_date, done3, done4, flagged, flag_by
         FROM vehicles
         WHERE status = 'active'
     """
@@ -403,13 +417,14 @@ if page == "Inventory List":
         display["Done 4"] = display["done4"].apply(lambda x: "✅" if x else "")
         display["ETC"] = display["etc_date"].fillna("")
         display["Notes"] = display["id"].map(note_preview)
-        display = display[["stock_number", "Vehicle", "vin", "age_days", "miles", "list_price", "cost", "ETC", "Done 3", "Done 4", "Notes", "id"]]
-        display.columns = ["Stock#", "Vehicle", "VIN", "Age", "Miles", "List $", "Cost $", "ETC", "Done 3", "Done 4", "Notes", "id"]
+        display["Flag"] = display["flagged"].apply(lambda x: "🚩" if x else "")
+        display = display[["stock_number", "Vehicle", "vin", "age_days", "miles", "list_price", "cost", "ETC", "Done 3", "Done 4", "Notes", "Flag", "flag_by", "id"]]
+        display.columns = ["Stock#", "Vehicle", "VIN", "Age", "Miles", "List $", "Cost $", "ETC", "Done 3", "Done 4", "Notes", "Flag", "Flag by", "id"]
 
         st.caption("Hover a car to read the notes. Click the stock number to open its workbook in this tab.")
-        widths = [1.1, 2.6, 1.7, 0.6, 0.8, 0.8, 0.8, 0.8, 0.6, 0.6, 2.2]
+        widths = [0.85, 2.1, 1.35, 0.42, 0.62, 0.62, 0.62, 0.7, 0.38, 0.38, 1.7, 0.32]
         header = st.columns(widths)
-        for col, name in zip(header, ["Stock#", "Vehicle", "VIN", "Age", "Miles", "List $", "Cost $", "ETC", "Done 3", "Done 4", "Notes"]):
+        for col, name in zip(header, ["Stock#", "Vehicle", "VIN", "Age", "Miles", "List $", "Cost $", "ETC", "Done 3", "Done 4", "Notes", ""]):
             col.markdown(f"**{name}**")
         for _, rec in display.iterrows():
             tip = html.escape(str(rec["Notes"])).replace("\n", "<br>")
@@ -451,6 +466,12 @@ if page == "Inventory List":
                 f"<span class='note-hover note-short'>{short}<span class='note-bubble'>{tip}</span></span>",
                 unsafe_allow_html=True,
             )
+            who = html.escape(str(rec["Flag by"] or ""))
+            if rec["Flag"]:
+                cols[11].markdown(
+                    f"<span class='note-hover flag-mark'>🚩<span class='note-bubble'>Flagged by {who}</span></span>",
+                    unsafe_allow_html=True,
+                )
 
         st.markdown("### Open Vehicle Workbook")
         st.caption("Click a car in the list. That fills the stock number below. Then hit Open Workbook.")
@@ -586,6 +607,27 @@ elif page == "Vehicle Workbook":
             st.success("Readiness fields saved")
             save_live_db()
             st.rerun()
+
+        st.markdown("---")
+        st.subheader("🚩 Flag")
+        if v["flagged"]:
+            st.error(f"Flagged by {v['flag_by']}")
+            if st.button("Clear flag", key=f"clear_flag_{vid}"):
+                execute("UPDATE vehicles SET flagged=0, flag_by=NULL, updated_at=CURRENT_TIMESTAMP WHERE id=?", [vid])
+                save_live_db()
+                st.rerun()
+        else:
+            flag_name = st.text_input("Your name to flag this car", key=f"flag_name_{vid}")
+            if st.button("Flag this car", key=f"set_flag_{vid}"):
+                if not flag_name.strip():
+                    st.warning("A name is required to flag a car.")
+                else:
+                    execute(
+                        "UPDATE vehicles SET flagged=1, flag_by=?, updated_at=CURRENT_TIMESTAMP WHERE id=?",
+                        [flag_name.strip(), vid],
+                    )
+                    save_live_db()
+                    st.rerun()
 
         st.markdown("---")
         st.subheader("Quick Status Update")
