@@ -134,10 +134,14 @@ div[data-testid="stHorizontalBlock"] { gap: 0.45rem; }
 div[data-testid="column"] { padding-left: 0.25rem; padding-right: 0.25rem; }
 div[data-testid="stButton"] button { padding: 0.1rem 0.4rem; min-height: 1.7rem; }
 .one-line, .one-line p { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin: 0; line-height: 1.8rem; }
-section[data-testid="stSidebar"] h1,
-section[data-testid="stSidebar"] [data-testid="stMetricLabel"],
-section[data-testid="stSidebar"] [data-testid="stMetricValue"] { text-align: center; }
-section[data-testid="stSidebar"] [data-testid="stMetric"] { text-align: center; }
+section[data-testid="stSidebar"] [data-testid="stSidebarContent"] {
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100vh - 2rem);
+}
+.sidebar-push { margin-top: auto; height: 1px; }
+section[data-testid="stSidebar"] [data-testid="stCaption"] { text-align: center; }
+section[data-testid="stSidebar"] div[data-testid="stButton"] { display: flex; justify-content: center; }
 .inv-table th:last-child, .inv-table td.note-short {
   width: 280px;
   max-width: 280px;
@@ -334,7 +338,7 @@ page = st.sidebar.radio(
 )
 
 
-st.sidebar.markdown("---")
+st.sidebar.markdown("<div class='sidebar-push'></div>", unsafe_allow_html=True)
 st.sidebar.caption(f"DB: {DB_PATH.name}")
 if st.sidebar.button("Save live database"):
     ok, msg = save_live_db()
