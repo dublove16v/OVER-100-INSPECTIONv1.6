@@ -134,7 +134,8 @@ div[data-testid="stHorizontalBlock"] { gap: 0.35rem; }
 div[data-testid="column"] { padding-left: 0.15rem; padding-right: 0.15rem; }
 div[data-testid="stVerticalBlock"] { gap: 0.15rem; }
 div[data-testid="stButton"] button { padding: 0.05rem 0.35rem; min-height: 1.5rem; }
-.flag-mark { color: #b91c1c; font-weight: 700; }
+.one-line, .one-line p { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin: 0; line-height: 1.7rem; }
+div[data-testid="stMarkdown"] p { margin-bottom: 0; }
 .inv-table th:last-child, .inv-table td.note-short {
   width: 280px;
   max-width: 280px;
@@ -424,7 +425,7 @@ if page == "Inventory List":
         st.caption("Hover a car to read the notes. Click the stock number to open its workbook in this tab.")
         widths = [0.85, 2.1, 1.35, 0.42, 0.62, 0.62, 0.62, 0.7, 0.38, 0.38, 1.7, 0.32]
         header = st.columns(widths)
-        for col, name in zip(header, ["Stock#", "Vehicle", "VIN", "Age", "Miles", "List $", "Cost $", "ETC", "Done 3", "Done 4", "Notes", ""]):
+        for col, name in zip(header, ["Stock#", "Vehicle", "VIN", "Age", "Miles", "List $", "Cost $", "ETC", "D3", "D4", "Notes", ""]):
             col.markdown(f"**{name}**")
         for _, rec in display.iterrows():
             tip = html.escape(str(rec["Notes"])).replace("\n", "<br>")
@@ -442,15 +443,15 @@ if page == "Inventory List":
                 st.session_state["goto_workbook"] = True
                 st.rerun()
             cols[1].markdown(
-                f"<span class='note-hover'>{vehicle}<span class='note-bubble'>{tip}</span></span>",
+                f"<div class='one-line note-hover'>{vehicle}<span class='note-bubble'>{tip}</span></div>",
                 unsafe_allow_html=True,
             )
-            cols[2].write(str(rec["VIN"] or ""))
-            cols[3].write(age)
-            cols[4].write(miles)
-            cols[5].write(list_price)
-            cols[6].write(cost)
-            cols[7].write(str(rec["ETC"] or ""))
+            cols[2].markdown(f"<div class='one-line'>{html.escape(str(rec['VIN'] or ''))}</div>", unsafe_allow_html=True)
+            cols[3].markdown(f"<div class='one-line'>{age}</div>", unsafe_allow_html=True)
+            cols[4].markdown(f"<div class='one-line'>{miles}</div>", unsafe_allow_html=True)
+            cols[5].markdown(f"<div class='one-line'>{list_price}</div>", unsafe_allow_html=True)
+            cols[6].markdown(f"<div class='one-line'>{cost}</div>", unsafe_allow_html=True)
+            cols[7].markdown(f"<div class='one-line'>{html.escape(str(rec['ETC'] or ''))}</div>", unsafe_allow_html=True)
             done3_now = str(rec["Done 3"]) == "✅"
             done4_now = str(rec["Done 4"]) == "✅"
             new_d3 = cols[8].checkbox("Done 3", value=done3_now, key=f"list_d3_{rec['id']}", label_visibility="collapsed")
@@ -463,7 +464,7 @@ if page == "Inventory List":
                 save_live_db()
                 st.rerun()
             cols[10].markdown(
-                f"<span class='note-hover note-short'>{short}<span class='note-bubble'>{tip}</span></span>",
+                f"<div class='one-line note-hover note-short'>{short}<span class='note-bubble'>{tip}</span></div>",
                 unsafe_allow_html=True,
             )
             who = html.escape(str(rec["Flag by"] or ""))
