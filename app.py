@@ -134,9 +134,10 @@ div[data-testid="stHorizontalBlock"] { gap: 0.45rem; }
 div[data-testid="column"] { padding-left: 0.25rem; padding-right: 0.25rem; }
 div[data-testid="stButton"] button { padding: 0.1rem 0.4rem; min-height: 1.7rem; }
 .one-line, .one-line p { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin: 0; line-height: 1.8rem; }
-[data-testid="stHeaderActionElements"],
-[data-testid="stHeadingActionElements"],
-a.heading-anchor { display: none !important; }
+section[data-testid="stSidebar"] h1,
+section[data-testid="stSidebar"] [data-testid="stMetricLabel"],
+section[data-testid="stSidebar"] [data-testid="stMetricValue"] { text-align: center; }
+section[data-testid="stSidebar"] [data-testid="stMetric"] { text-align: center; }
 .inv-table th:last-child, .inv-table td.note-short {
   width: 280px;
   max-width: 280px;
@@ -303,8 +304,8 @@ def admin_ok(username, password):
     digest = hashlib.sha256(password.encode()).hexdigest()
     return hmac.compare_digest(digest, ADMIN_PASS_HASH)
 
-st.sidebar.title("AIM")
-st.sidebar.markdown("**Aged Inventory Management**")
+st.sidebar.markdown("<h1 style='text-align: center; margin-bottom: 0;'>AIM</h1>", unsafe_allow_html=True)
+st.sidebar.markdown("<p style='text-align: center; font-weight: 700;'>Aged Inventory Management</p>", unsafe_allow_html=True)
 if st.session_state.get("is_admin"):
     st.sidebar.success("Admin: LPURDY")
     if st.sidebar.button("Log out"):
