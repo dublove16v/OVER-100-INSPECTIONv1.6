@@ -436,8 +436,17 @@ if page == "Inventory List":
             cols[5].write(list_price)
             cols[6].write(cost)
             cols[7].write(str(rec["ETC"] or ""))
-            cols[8].write(str(rec["Done 3"] or ""))
-            cols[9].write(str(rec["Done 4"] or ""))
+            done3_now = str(rec["Done 3"]) == "✅"
+            done4_now = str(rec["Done 4"]) == "✅"
+            new_d3 = cols[8].checkbox("Done 3", value=done3_now, key=f"list_d3_{rec['id']}", label_visibility="collapsed")
+            new_d4 = cols[9].checkbox("Done 4", value=done4_now, key=f"list_d4_{rec['id']}", label_visibility="collapsed")
+            if new_d3 != done3_now or new_d4 != done4_now:
+                execute(
+                    "UPDATE vehicles SET done3=?, done4=?, updated_at=CURRENT_TIMESTAMP WHERE id=?",
+                    [1 if new_d3 else 0, 1 if new_d4 else 0, int(rec["id"])],
+                )
+                save_live_db()
+                st.rerun()
             cols[10].markdown(
                 f"<span class='note-hover note-short'>{short}<span class='note-bubble'>{tip}</span></span>",
                 unsafe_allow_html=True,
