@@ -379,6 +379,10 @@ if page == "Inventory List":
         min_age = st.number_input("Min Age (days)", 0, 9999, 0)
     with col4:
         sort_by = st.selectbox("Sort by", ["Age (desc)", "Age (asc)", "Stock#", "List Price", "Make"])
+    show = st.selectbox(
+        "Show",
+        ["All", "Needs Reshoot", "Flagged", "Done 3", "Done 4", "Neither Done 3 nor Done 4", "No notes"],
+    )
 
     sql = """
         SELECT id, stock_number, year, make, model_desc, vin, age_days, miles, list_price, cost, key_code,
@@ -397,6 +401,18 @@ if page == "Inventory List":
     if min_age > 0:
         sql += " AND age_days >= ?"
         params.append(min_age)
+    if show == "Needs Reshoot":
+        sql += " AND reshoot = 1"
+    elif show == "Flagged":
+        sql += " AND flagged = 1"
+    elif show == "Done 3":
+        sql += " AND done3 = 1"
+    elif show == "Done 4":
+        sql += " AND done4 = 1"
+    elif show == "Neither Done 3 nor Done 4":
+        sql += " AND COALESCE(done3, 0) = 0 AND COALESCE(done4, 0) = 0"
+    elif show == "No notes":
+        sql += " AND id NOT IN (SELECT vehicle_id FROM notes)"
 
     order_map = {
         "Age (desc)": "age_days DESC",
