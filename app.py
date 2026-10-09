@@ -344,13 +344,6 @@ page = st.sidebar.radio(
     label_visibility="collapsed",
     key="nav_page",
 )
-
-
-st.sidebar.markdown("<div class='sidebar-push'></div>", unsafe_allow_html=True)
-if st.sidebar.button("Save live database"):
-    ok, msg = save_live_db()
-    st.sidebar.success(msg) if ok else st.sidebar.error(msg)
-st.sidebar.caption("Saves inventory.db to GitHub so a redeploy keeps notes and checks.")
 stats = query_df("SELECT status, COUNT(*) as cnt FROM vehicles GROUP BY status")
 for _, r in stats.iterrows():
     st.sidebar.metric(r["status"].title(), r["cnt"])
@@ -938,6 +931,11 @@ elif page == "Change Log":
 # ---------- ABOUT ----------
 else:
     st.title("About This System")
+    st.caption("Notes, checks, and flags save to GitHub on their own. Use this if you want to force a save.")
+    _, mid, _ = st.columns([1, 1, 1])
+    if mid.button("Save live database", use_container_width=True):
+        ok, msg = save_live_db()
+        st.success(msg) if ok else st.error(msg)
     st.markdown(
         """
         ### Dealer Inventory Management (VAuto-style)
