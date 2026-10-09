@@ -341,7 +341,7 @@ else:
             else:
                 st.error("Wrong username or password")
 
-pages = ["Inventory List", "Vehicle Workbook", "Weekly Snapshot", "Archived / Sold", "About"]
+pages = ["Inventory List", "Vehicle Workbook", "Weekly Snapshot", "Sold", "About"]
 if st.session_state.get("is_admin"):
     pages.insert(4, "Change Log")
 page = st.sidebar.radio(
@@ -350,9 +350,12 @@ page = st.sidebar.radio(
     label_visibility="collapsed",
     key="nav_page",
 )
-stats = query_df("SELECT status, COUNT(*) as cnt FROM vehicles GROUP BY status")
-for _, r in stats.iterrows():
-    st.sidebar.metric(r["status"].title(), r["cnt"])
+stats = query_df("SELECT lower(status) AS status, COUNT(*) as cnt FROM vehicles GROUP BY lower(status)")
+counts = {r["status"]: int(r["cnt"]) for _, r in stats.iterrows()}
+active_n = counts.get("active", 0)
+sold_n = counts.get("sold", 0) + counts.get("archived", 0)
+st.sidebar.markdown(f"<p style='text-align:center; margin:0.8rem 0 0;'>Active inventory</p><p style='text-align:center; font-size:1.8rem; font-weight:700; margin:0;'>{active_n}</p>", unsafe_allow_html=True)
+st.sidebar.markdown(f"<p style='text-align:center; margin:0.8rem 0 0;'>Sold inventory</p><p style='text-align:center; font-size:1.8rem; font-weight:700; margin:0;'>{sold_n}</p>", unsafe_allow_html=True)
 
 # ---------- INVENTORY LIST ----------
 if page == "Inventory List":
@@ -643,7 +646,9 @@ elif page == "Vehicle Workbook":
 
         st.markdown("---")
         st.subheader("Quick Status Update")
-        new_status = st.selectbox("Change status", ["active", "sold", "archived"], index=["active", "sold", "archived"].index(v["status"]))
+        status_choices = ["active", "sold"]
+        current_status = "sold" if str(v["status"]).lower() in ("sold", "archived") else "active"
+        new_status = st.selectbox("Change status", status_choices, index=status_choices.index(current_status))
         if st.button("Update Status") and new_status != v["status"]:
             execute("UPDATE vehicles SET status=?, updated_at=CURRENT_TIMESTAMP WHERE id=?", [new_status, vid])
             st.success(f"Status changed to {new_status}")
@@ -822,6 +827,11 @@ elif page == "Weekly Snapshot":
                 keyc = str(row.get("KEY CODE", "")) if pd.notna(row.get("KEY CODE")) else None
                 emis = str(row.get("EMISSIONS", "")) if pd.notna(row.get("EMISSIONS")) else None
 
+                prior = query_df("SELECT id, status, last_seen FROM vehicles WHERE stock_number=?", [stock])
+                if prior.empty and base:
+                    prior = query_df("SELECT id, status, last_seen FROM vehicles WHERE stock_base=?", [base])
+                was_sold = (not prior.empty) and str(prior.iloc[0]["status"]).lower() in ("sold", "archived")
+                sold_on = str(prior.iloc[0]["last_seen"] or "")[:10] if was_sold else ""
                 if stock in existing_map:
                     vid = existing_map[stock]
                     execute(
@@ -848,6 +858,11 @@ elif page == "Weekly Snapshot":
                     new_count += 1
 
                 seen_ids.add(vid)
+                if was_sold:
+                    execute(
+                        "INSERT INTO notes (vehicle_id, note_type, content, author) VALUES (?, 'general', ?, 'AIM')",
+                        [vid, f"Sold and Unaccepted ({sold_on} sold, {today} returned to feed)"],
+                    )
                 execute(
                     "INSERT INTO snapshot_vehicles (snapshot_id, vehicle_id, age_days, list_price, status_at_snapshot) VALUES (?,?,?,?,?)",
                     [snap_id, vid, age, listp, "active"],
@@ -884,35 +899,28 @@ elif page == "Weekly Snapshot":
         st.dataframe(snaps, use_container_width=True, hide_index=True)
 
 # ---------- ARCHIVED / SOLD ----------
-elif page == "Archived / Sold":
-    st.title("Archived / Sold Vehicles")
+elif page == "Sold":
+    st.title("Sold Vehicles")
+    st.caption("Vehicles missing from the latest inventory report. A sold car that comes back on a new upload returns to the active list with a Sold and Unaccepted note.")
+
+    df = query_df("SELECT stock_number, year, make, model_desc, vin, age_days, list_price, last_seen FROM vehicles WHERE lower(status) IN ('sold','archived') ORDER BY updated_at DESC")
+    if df.empty:
+        st.info("No sold vehicles yet.")
+    else:
+        st.dataframe(df, use_container_width=True, hide_index=True)
+        st.markdown("---")
+        st.subheader("Return a car to active inventory")
+        stocks = df["stock_number"].tolist()
+        to_restore = st.multiselect("Select to return", stocks)
+        if st.button("Return selected") and to_restore:
+            for s in to_restore:
+                execute("UPDATE vehicles SET status='active', updated_at=CURRENT_TIMESTAMP WHERE stock_number=?", [s])
+            st.success(f"Returned {len(to_restore)} vehicles")
+            save_live_db()
+            st.rerun()
     just_sold = st.session_state.get("last_sold_stocks") or []
     if just_sold:
         st.info("Last import marked these sold: " + ", ".join(just_sold))
-    status_filter = st.radio("Show", ["sold", "archived", "both"], horizontal=True)
-    if status_filter == "both":
-        df = query_df("SELECT stock_number, year, make, model_desc, vin, age_days, list_price, last_seen, status FROM vehicles WHERE lower(status) IN ('sold','archived') ORDER BY updated_at DESC")
-    else:
-        df = query_df("SELECT stock_number, year, make, model_desc, vin, age_days, list_price, last_seen, status FROM vehicles WHERE lower(status)=? ORDER BY updated_at DESC", [status_filter])
-
-    st.write(f"**{len(df)} vehicles**")
-    if df.empty:
-        st.warning("No sold or archived vehicles in the database yet. If an import said cars were sold, run that import again and check the stock numbers it lists.")
-    else:
-        st.dataframe(df, use_container_width=True, hide_index=True)
-        for _, row in df.iterrows():
-            st.write(f"**{row['stock_number']}** — {row['year']} {row['make']} {row['model_desc']} ({row['status']})")
-
-        # Restore option
-        st.markdown("### Restore to Active")
-        stocks = df["stock_number"].tolist()
-        to_restore = st.multiselect("Select to restore", stocks)
-        if st.button("Restore selected") and to_restore:
-            for s in to_restore:
-                execute("UPDATE vehicles SET status='active', updated_at=CURRENT_TIMESTAMP WHERE stock_number=?", [s])
-            st.success(f"Restored {len(to_restore)} vehicles")
-            save_live_db()
-            st.rerun()
 
 # ---------- CHANGE LOG ----------
 elif page == "Change Log":
@@ -955,7 +963,7 @@ else:
           - Service Department Notes
           - All notes + general notes
           - Snapshot history
-        - Weekly Snapshot import: add new cars, update existing, auto-archive / mark sold the ones that disappear
+        - Weekly Snapshot import: add new cars, update existing, mark sold the ones that disappear. A sold car that returns is pulled back to active inventory.
         - Search, filter, sort
         - Multi-user ready when hosted (Streamlit Cloud, internal server, or shared folder + local run)
 
