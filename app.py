@@ -139,8 +139,8 @@ section[data-testid="stSidebar"] [data-testid="stSidebarContent"] {
   flex-direction: column;
   min-height: calc(100vh - 2rem);
 }
-.sidebar-push { margin-top: auto; height: 1px; }
-section[data-testid="stSidebar"] [data-testid="stCaption"] { text-align: center; }
+.sidebar-push { min-height: 28vh; }
+section[data-testid="stSidebar"] [data-testid="stCaption"] { text-align: center; display: block; }
 section[data-testid="stSidebar"] div[data-testid="stButton"] { display: flex; justify-content: center; }
 .inv-table th:last-child, .inv-table td.note-short {
   width: 280px;
@@ -339,7 +339,6 @@ page = st.sidebar.radio(
 
 
 st.sidebar.markdown("<div class='sidebar-push'></div>", unsafe_allow_html=True)
-st.sidebar.caption(f"DB: {DB_PATH.name}")
 if st.sidebar.button("Save live database"):
     ok, msg = save_live_db()
     st.sidebar.success(msg) if ok else st.sidebar.error(msg)
