@@ -560,6 +560,26 @@ elif page == "Vehicle Workbook":
     done4_icon = "✅" if v["done4"] else "⬜"
     st.caption(f"VIN: `{v['vin']}`  |  Miles: {v['miles'] or '—'}  |  Key: {v['key_code'] or '—'}  |  Emissions: {v['emissions'] or '—'}  |  Done 3: {done3_icon}  |  Done 4: {done4_icon}")
 
+    flag_on = st.toggle("🚩 Flag this car", value=bool(v["flagged"]), key=f"flag_toggle_{vid}")
+    if flag_on and not v["flagged"]:
+        flag_name = st.text_input("Your name to flag this car", key=f"flag_name_{vid}")
+        if st.button("Save flag", key=f"set_flag_{vid}"):
+            if not flag_name.strip():
+                st.warning("A name is required to flag a car.")
+            else:
+                execute(
+                    "UPDATE vehicles SET flagged=1, flag_by=?, updated_at=CURRENT_TIMESTAMP WHERE id=?",
+                    [flag_name.strip(), vid],
+                )
+                save_live_db()
+                st.rerun()
+    elif flag_on and v["flagged"]:
+        st.caption(f"Flagged by {v['flag_by']}")
+    elif (not flag_on) and v["flagged"]:
+        execute("UPDATE vehicles SET flagged=0, flag_by=NULL, updated_at=CURRENT_TIMESTAMP WHERE id=?", [vid])
+        save_live_db()
+        st.rerun()
+
     # Tabs
     tab_info, tab_inspector, tab_service, tab_all, tab_history = st.tabs(
         ["📋 Info", "🔍 Inspector Notes", "🔧 Service Notes", "📝 All Notes", "📅 History"]
@@ -607,27 +627,6 @@ elif page == "Vehicle Workbook":
             st.success("Readiness fields saved")
             save_live_db()
             st.rerun()
-
-        st.markdown("---")
-        st.subheader("🚩 Flag")
-        if v["flagged"]:
-            st.error(f"Flagged by {v['flag_by']}")
-            if st.button("Clear flag", key=f"clear_flag_{vid}"):
-                execute("UPDATE vehicles SET flagged=0, flag_by=NULL, updated_at=CURRENT_TIMESTAMP WHERE id=?", [vid])
-                save_live_db()
-                st.rerun()
-        else:
-            flag_name = st.text_input("Your name to flag this car", key=f"flag_name_{vid}")
-            if st.button("Flag this car", key=f"set_flag_{vid}"):
-                if not flag_name.strip():
-                    st.warning("A name is required to flag a car.")
-                else:
-                    execute(
-                        "UPDATE vehicles SET flagged=1, flag_by=?, updated_at=CURRENT_TIMESTAMP WHERE id=?",
-                        [flag_name.strip(), vid],
-                    )
-                    save_live_db()
-                    st.rerun()
 
         st.markdown("---")
         st.subheader("Quick Status Update")
