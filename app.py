@@ -579,9 +579,10 @@ elif page == "Vehicle Workbook":
     st.caption(f"VIN: `{v['vin']}`  |  Miles: {v['miles'] or '—'}  |  Key: {v['key_code'] or '—'}  |  Emissions: {v['emissions'] or '—'}  |  Done 3: {done3_icon}  |  Done 4: {done4_icon}")
 
     flag_on = st.toggle("🚩 Flag this car", value=bool(v["flagged"]), key=f"flag_toggle_{vid}")
-    if flag_on and not v["flagged"]:
-        flag_name = st.text_input("Your name to flag this car", key=f"flag_name_{vid}")
-        flag_note = st.text_input("Why is it flagged?", key=f"flag_note_{vid}")
+    if flag_on:
+        name_col, note_col = st.columns(2)
+        flag_name = name_col.text_input("Your name", value=v["flag_by"] or "", key=f"flag_name_{vid}")
+        flag_note = note_col.text_input("Why is it flagged?", value=v["flag_note"] or "", key=f"flag_note_{vid}")
         if st.button("Save flag", key=f"set_flag_{vid}"):
             if not flag_name.strip():
                 st.warning("A name is required to flag a car.")
@@ -592,14 +593,7 @@ elif page == "Vehicle Workbook":
                 )
                 save_live_db()
                 st.rerun()
-    elif flag_on and v["flagged"]:
-        st.caption(f"Flagged by {v['flag_by']}")
-        flag_note = st.text_input("Why is it flagged?", value=v["flag_note"] or "", key=f"flag_note_{vid}")
-        if st.button("Save flag note", key=f"save_flag_note_{vid}"):
-            execute("UPDATE vehicles SET flag_note=?, updated_at=CURRENT_TIMESTAMP WHERE id=?", [flag_note.strip(), vid])
-            save_live_db()
-            st.rerun()
-    elif (not flag_on) and v["flagged"]:
+    elif v["flagged"]:
         execute("UPDATE vehicles SET flagged=0, flag_by=NULL, flag_note=NULL, updated_at=CURRENT_TIMESTAMP WHERE id=?", [vid])
         save_live_db()
         st.rerun()
