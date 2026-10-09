@@ -484,6 +484,7 @@ if page == "Inventory List":
                 f"<div class='one-line note-hover note-short'><span class='clip'>{short}</span><span class='note-bubble'>{tip}</span></div>",
                 unsafe_allow_html=True,
             )
+            who = html.escape(str(rec["Flag by"] or ""))
             why = html.escape(str(rec["Flag note"] or "")).replace("\n", "<br>")
             if rec["Flag"]:
                 cols[11].markdown(
