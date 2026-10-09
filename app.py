@@ -293,6 +293,8 @@ def ensure_flags():
         execute("ALTER TABLE vehicles ADD COLUMN flagged INTEGER DEFAULT 0")
     if "flag_by" not in cols:
         execute("ALTER TABLE vehicles ADD COLUMN flag_by TEXT")
+    if "flag_note" not in cols:
+        execute("ALTER TABLE vehicles ADD COLUMN flag_note TEXT")
 
 ensure_flags()
 
@@ -374,7 +376,7 @@ if page == "Inventory List":
 
     sql = """
         SELECT id, stock_number, year, make, model_desc, vin, age_days, miles, list_price, cost, key_code,
-               etc_date, done3, done4, flagged, flag_by
+               etc_date, done3, done4, flagged, flag_by, flag_note
         FROM vehicles
         WHERE status = 'active'
     """
@@ -434,8 +436,8 @@ if page == "Inventory List":
         display["ETC"] = display["etc_date"].fillna("")
         display["Notes"] = display["id"].map(note_preview)
         display["Flag"] = display["flagged"].apply(lambda x: "🚩" if x else "")
-        display = display[["stock_number", "Vehicle", "vin", "age_days", "miles", "list_price", "cost", "ETC", "Done 3", "Done 4", "Notes", "Flag", "flag_by", "id"]]
-        display.columns = ["Stock#", "Vehicle", "VIN", "Age", "Miles", "List $", "Cost $", "ETC", "Done 3", "Done 4", "Notes", "Flag", "Flag by", "id"]
+        display = display[["stock_number", "Vehicle", "vin", "age_days", "miles", "list_price", "cost", "ETC", "Done 3", "Done 4", "Notes", "Flag", "flag_by", "flag_note", "id"]]
+        display.columns = ["Stock#", "Vehicle", "VIN", "Age", "Miles", "List $", "Cost $", "ETC", "Done 3", "Done 4", "Notes", "Flag", "Flag by", "Flag note", "id"]
 
         st.caption("Hover a car to read the notes. Click the stock number to open its workbook in this tab.")
         widths = [0.85, 2.1, 1.35, 0.42, 0.62, 0.62, 0.62, 0.7, 0.38, 0.38, 1.7, 0.32]
@@ -482,10 +484,10 @@ if page == "Inventory List":
                 f"<div class='one-line note-hover note-short'><span class='clip'>{short}</span><span class='note-bubble'>{tip}</span></div>",
                 unsafe_allow_html=True,
             )
-            who = html.escape(str(rec["Flag by"] or ""))
+            why = html.escape(str(rec["Flag note"] or "")).replace("\n", "<br>")
             if rec["Flag"]:
                 cols[11].markdown(
-                    f"<span class='note-hover flag-mark'>🚩<span class='note-bubble'>Flagged by {who}</span></span>",
+                    f"<span class='note-hover flag-mark'>🚩<span class='note-bubble'>Flagged by {who}<br>{why}</span></span>",
                     unsafe_allow_html=True,
                 )
 
@@ -579,20 +581,26 @@ elif page == "Vehicle Workbook":
     flag_on = st.toggle("🚩 Flag this car", value=bool(v["flagged"]), key=f"flag_toggle_{vid}")
     if flag_on and not v["flagged"]:
         flag_name = st.text_input("Your name to flag this car", key=f"flag_name_{vid}")
+        flag_note = st.text_input("Why is it flagged?", key=f"flag_note_{vid}")
         if st.button("Save flag", key=f"set_flag_{vid}"):
             if not flag_name.strip():
                 st.warning("A name is required to flag a car.")
             else:
                 execute(
-                    "UPDATE vehicles SET flagged=1, flag_by=?, updated_at=CURRENT_TIMESTAMP WHERE id=?",
-                    [flag_name.strip(), vid],
+                    "UPDATE vehicles SET flagged=1, flag_by=?, flag_note=?, updated_at=CURRENT_TIMESTAMP WHERE id=?",
+                    [flag_name.strip(), flag_note.strip(), vid],
                 )
                 save_live_db()
                 st.rerun()
     elif flag_on and v["flagged"]:
         st.caption(f"Flagged by {v['flag_by']}")
+        flag_note = st.text_input("Why is it flagged?", value=v["flag_note"] or "", key=f"flag_note_{vid}")
+        if st.button("Save flag note", key=f"save_flag_note_{vid}"):
+            execute("UPDATE vehicles SET flag_note=?, updated_at=CURRENT_TIMESTAMP WHERE id=?", [flag_note.strip(), vid])
+            save_live_db()
+            st.rerun()
     elif (not flag_on) and v["flagged"]:
-        execute("UPDATE vehicles SET flagged=0, flag_by=NULL, updated_at=CURRENT_TIMESTAMP WHERE id=?", [vid])
+        execute("UPDATE vehicles SET flagged=0, flag_by=NULL, flag_note=NULL, updated_at=CURRENT_TIMESTAMP WHERE id=?", [vid])
         save_live_db()
         st.rerun()
 
