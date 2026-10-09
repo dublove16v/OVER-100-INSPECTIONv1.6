@@ -133,7 +133,9 @@ input, textarea, select {
 div[data-testid="stHorizontalBlock"] { gap: 0.45rem; }
 div[data-testid="column"] { padding-left: 0.25rem; padding-right: 0.25rem; }
 div[data-testid="stButton"] button { padding: 0.1rem 0.4rem; min-height: 1.7rem; }
-.one-line, .one-line p { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin: 0; line-height: 1.8rem; }
+.one-line { white-space: nowrap; line-height: 1.8rem; }
+.one-line .clip { display: block; overflow: hidden; text-overflow: ellipsis; }
+div[data-testid="column"], div[data-testid="stHorizontalBlock"] { overflow: visible !important; }
 section[data-testid="stSidebar"] [data-testid="stSidebarContent"] {
   display: flex;
   flex-direction: column;
@@ -453,7 +455,7 @@ if page == "Inventory List":
                 st.session_state["goto_workbook"] = True
                 st.rerun()
             cols[1].markdown(
-                f"<div class='one-line note-hover'>{vehicle}<span class='note-bubble'>{tip}</span></div>",
+                f"<div class='one-line note-hover'><span class='clip'>{vehicle}</span><span class='note-bubble'>{tip}</span></div>",
                 unsafe_allow_html=True,
             )
             cols[2].markdown(f"<div class='one-line'>{html.escape(str(rec['VIN'] or ''))}</div>", unsafe_allow_html=True)
@@ -474,7 +476,7 @@ if page == "Inventory List":
                 save_live_db()
                 st.rerun()
             cols[10].markdown(
-                f"<div class='one-line note-hover note-short'>{short}<span class='note-bubble'>{tip}</span></div>",
+                f"<div class='one-line note-hover note-short'><span class='clip'>{short}</span><span class='note-bubble'>{tip}</span></div>",
                 unsafe_allow_html=True,
             )
             who = html.escape(str(rec["Flag by"] or ""))
