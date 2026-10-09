@@ -140,7 +140,15 @@ section[data-testid="stSidebar"] [data-testid="stSidebarContent"] {
   min-height: calc(100vh - 2rem);
 }
 .sidebar-push { min-height: 28vh; }
-section[data-testid="stSidebar"] [data-testid="stCaption"] { text-align: center; display: block; }
+section[data-testid="stSidebar"] [data-testid="stMetric"],
+section[data-testid="stSidebar"] [data-testid="stMetricLabel"],
+section[data-testid="stSidebar"] [data-testid="stMetricValue"],
+section[data-testid="stSidebar"] [data-testid="stMetricLabel"] p,
+section[data-testid="stSidebar"] [data-testid="stMetricValue"] div {
+  text-align: center !important;
+  justify-content: center !important;
+  width: 100%;
+}
 section[data-testid="stSidebar"] div[data-testid="stButton"] { display: flex; justify-content: center; }
 .inv-table th:last-child, .inv-table td.note-short {
   width: 280px;
