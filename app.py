@@ -580,10 +580,14 @@ elif page == "Vehicle Workbook":
     st.caption(f"VIN: `{v['vin']}`  |  Miles: {v['miles'] or '—'}  |  Key: {v['key_code'] or '—'}  |  Emissions: {v['emissions'] or '—'}  |  Done 3: {done3_icon}  |  Done 4: {done4_icon}")
 
     flag_on = st.toggle("🚩 Flag this car", value=bool(v["flagged"]), key=f"flag_toggle_{vid}")
-    if flag_on:
+    if flag_on and v["flagged"]:
         name_col, note_col = st.columns(2)
-        flag_name = name_col.text_input("Your name", value=v["flag_by"] or "", key=f"flag_name_{vid}")
-        flag_note = note_col.text_input("Why is it flagged?", value=v["flag_note"] or "", key=f"flag_note_{vid}")
+        name_col.text_input("Your name", value=v["flag_by"] or "", key=f"flag_name_locked_{vid}", disabled=True)
+        note_col.text_input("Why is it flagged?", value=v["flag_note"] or "", key=f"flag_note_locked_{vid}", disabled=True)
+    elif flag_on:
+        name_col, note_col = st.columns(2)
+        flag_name = name_col.text_input("Your name", key=f"flag_name_{vid}")
+        flag_note = note_col.text_input("Why is it flagged?", key=f"flag_note_{vid}")
         if st.button("Save flag", key=f"set_flag_{vid}"):
             if not flag_name.strip():
                 st.warning("A name is required to flag a car.")
