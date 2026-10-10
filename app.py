@@ -367,7 +367,7 @@ st.sidebar.markdown(f"<p style='text-align:center; margin:0.8rem 0 0;'>Sold inve
 
 # ---------- INVENTORY LIST ----------
 if page == "Inventory List":
-    st.title("Inventory List")
+    st.title("Inventory List")  # safety test 2026-10-10
     st.caption("Active vehicles — click Stock# or use Workbook to open detail")
 
     col1, col2, col3, col4 = st.columns(4)
